@@ -26,7 +26,7 @@ const HEADERS = ['id', 'name', 'qty', 'category', 'expiry', 'addedOn', 'alertDay
 /* ------------------------------------------------------------------ */
 function setup() {
   if (TELEGRAM_TOKEN.indexOf('YAHAN') === 0 || APP_KEY.indexOf('YAHAN') === 0) {
-    throw new Error('Pehle upar TELEGRAM_TOKEN aur APP_KEY bharo, phir setup Run karo.');
+    throw new Error('Fill in TELEGRAM_TOKEN and APP_KEY at the top first, then run setup again.');
   }
   sheet_();
   // purane triggers hatao, naya 1-minute wala lagao
@@ -37,20 +37,20 @@ function setup() {
   // webhook band (hum polling use karte hain, Apps Script ke saath ye zyada reliable hai)
   tg_('deleteWebhook', { drop_pending_updates: false });
   const me = tg_('getMe', {});
-  Logger.log('✅ Setup ho gaya. Bot: @' + (me && me.result ? me.result.username : '?'));
-  Logger.log('Ab Telegram group mein /start bhejo (1 minute mein bot reply karega).');
+  Logger.log('✅ Setup done. Bot: @' + (me && me.result ? me.result.username : '?'));
+  Logger.log('Now send /start in your Telegram group (the bot replies within a minute).');
 }
 
 /** Turant ek alert bhej ke test karna ho toh ise Run karo. */
 function testAlert() {
   const sent = sendDailyAlert_(true);
-  Logger.log(sent ? 'Alert bhej diya.' : 'Abhi koi item alert ke laayak nahi hai (ya group juda nahi hai).');
+  Logger.log(sent ? 'Alert sent.' : 'Nothing needs an alert right now (or no group is linked).');
 }
 
 /** Group badalna ho toh ise Run karo, phir naye group mein /start bhejo. */
 function resetGroup() {
   PropertiesService.getScriptProperties().deleteProperty('CHAT_ID');
-  Logger.log('Group hata diya. Naye group mein /start bhejo.');
+  Logger.log('Group unlinked. Send /start in the new group.');
 }
 
 /* ------------------------------------------------------------------ */
@@ -110,6 +110,10 @@ function publicItem_(o) {
 /* DATE + ALERT LOGIC                                                  */
 /* ------------------------------------------------------------------ */
 function today_() { return Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd'); }
+function niceTime_() {
+  const p = ALERT_TIME.split(':').map(Number);
+  return (p[0] % 12 || 12) + ':' + pad_(p[1]) + (p[0] < 12 ? ' AM' : ' PM');
+}
 function nowHM_() { return Utilities.formatDate(new Date(), TZ, 'HH:mm'); }
 
 function toUTC_(iso) {
@@ -153,10 +157,10 @@ function guessCategory_(name) {
 /* ------------------------------------------------------------------ */
 function addItem_(d, by) {
   const name = String(d.name || '').trim();
-  if (!name) throw new Error('Item ka naam chahiye');
+  if (!name) throw new Error('Item name is required');
   const status = d.status === 'shopping' ? 'shopping' : 'active';
   const expiry = String(d.expiry || '');
-  if (status === 'active' && !isISO_(expiry)) throw new Error('Expiry date chahiye');
+  if (status === 'active' && !isISO_(expiry)) throw new Error('Expiry date is required');
   const t = today_();
   const o = {
     id: Utilities.getUuid().slice(0, 8),
@@ -183,11 +187,11 @@ function findById_(id) {
 
 function updateItem_(d) {
   const o = findById_(d.id);
-  if (!o) throw new Error('Item nahi mila');
+  if (!o) throw new Error('Item not found');
   ['name', 'qty', 'category'].forEach(function (k) { if (d[k] !== undefined) o[k] = k === 'name' ? cap_(d[k]) : String(d[k]); });
   let resetFlags = false;
   if (d.expiry !== undefined && d.expiry !== o.expiry) {
-    if (!isISO_(d.expiry)) throw new Error('Expiry date galat hai');
+    if (!isISO_(d.expiry)) throw new Error('Invalid expiry date');
     o.expiry = d.expiry; resetFlags = true;
     if (d.alertDays === undefined || d.alertDays === 'auto') o.alertDays = autoAlert_(o.addedOn || today_(), o.expiry);
   }
@@ -200,7 +204,7 @@ function updateItem_(d) {
 
 function finishItem_(id) {
   const o = findById_(id);
-  if (!o) throw new Error('Item nahi mila');
+  if (!o) throw new Error('Item not found');
   o.status = 'shopping';
   o.updatedOn = new Date().toISOString();
   writeRow_(o);
@@ -209,7 +213,7 @@ function finishItem_(id) {
 
 function restockItem_(d, by) {
   const o = findById_(d.id);
-  if (!o) throw new Error('Item nahi mila');
+  if (!o) throw new Error('Item not found');
   o.status = 'cleared';
   o.updatedOn = new Date().toISOString();
   writeRow_(o);
@@ -219,7 +223,7 @@ function restockItem_(d, by) {
 
 function reactivateItem_(id) {
   const o = findById_(id);
-  if (!o) throw new Error('Item nahi mila');
+  if (!o) throw new Error('Item not found');
   o.status = 'active';
   o.updatedOn = new Date().toISOString();
   writeRow_(o);
@@ -246,7 +250,7 @@ function cap_(s) { s = String(s).trim(); return s.charAt(0).toUpperCase() + s.sl
 /* ------------------------------------------------------------------ */
 function doGet(e) {
   const p = (e && e.parameter) || {};
-  if (p.key !== APP_KEY) return json_({ ok: false, error: 'Family code galat hai' });
+  if (p.key !== APP_KEY) return json_({ ok: false, error: 'Wrong family code' });
   try {
     return json_({ ok: true, items: listItems_().map(publicItem_), today: today_() });
   } catch (err) {
@@ -258,7 +262,7 @@ function doPost(e) {
   let d = {};
   try { d = JSON.parse((e && e.postData && e.postData.contents) || '{}'); } catch (x) { return json_({ ok: false, error: 'Bad request' }); }
   if (d.update_id !== undefined) return json_({ ok: true }); // galti se webhook aaya ho toh ignore
-  if (d.key !== APP_KEY) return json_({ ok: false, error: 'Family code galat hai' });
+  if (d.key !== APP_KEY) return json_({ ok: false, error: 'Wrong family code' });
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
@@ -347,12 +351,11 @@ function handleMessage_(msg) {
   if (/^\/start\b/i.test(text)) {
     if (!saved) {
       props.setProperty('CHAT_ID', chatId);
-      say_(chatId, '🙏 <b>Kirana Management</b> is group se jud gaya!\n\nRoz ' + ALERT_TIME.replace(':', '.') +
-        ' baje expiry alert yahin aayega.\n\n' + helpText_());
+      say_(chatId, '👋 <b>Kirana Management</b> is now linked to this group!\n\nExpiry alerts will arrive here daily at ' + niceTime_() + '.\n\n' + helpText_());
     } else if (saved === chatId) {
       say_(chatId, helpText_());
     } else {
-      say_(chatId, 'Ye bot pehle se kisi aur group se juda hua hai.');
+      say_(chatId, 'This bot is already linked to another group.');
     }
     return;
   }
@@ -361,12 +364,12 @@ function handleMessage_(msg) {
   const by = (msg.from && (msg.from.first_name || msg.from.username)) || 'Telegram';
   const low = text.toLowerCase().replace(/^\//, '').trim();
 
-  if (/^(help|madad)$/.test(low)) return say_(chatId, helpText_());
+  if (/^(help|madad|start)$/.test(low)) return say_(chatId, helpText_());
   if (/^(list|stock|sab|saman|saamaan)$/.test(low)) return say_(chatId, listText_());
-  if (/^(shopping|kya lana hai|lana hai|lana)$/.test(low)) return say_(chatId, shoppingText_());
-  if (/^(jaldi|expiring|expiry)$/.test(low)) return say_(chatId, expiringText_());
+  if (/^(shopping|buy|kya lana hai|lana hai|lana)$/.test(low)) return say_(chatId, shoppingText_());
+  if (/^(jaldi|expiring|expiry|soon)$/.test(low)) return say_(chatId, expiringText_());
 
-  let m = low.match(/^(?:khatam|khtm|finish|done)\s+(.+)$/) || low.match(/^(.+?)\s+(?:khatam|khtm|khatm|finish)$/);
+  let m = low.match(/^(?:khatam|khtm|finish|done|used)\s+(.+)$/) || low.match(/^(.+?)\s+(?:khatam|khtm|khatm|finish)$/);
   if (m) return say_(chatId, finishByName_(m[1].trim()));
 
   let body = text.replace(/^\/?(add|daalo|dalo)\s+/i, '');
@@ -377,23 +380,23 @@ function handleMessage_(msg) {
     const o = addItem_(parsed, by);
     const dl = daysBetween_(today_(), o.expiry);
     const alertOn = addDays_(o.expiry, -Number(o.alertDays));
-    return say_(chatId, '✅ <b>' + esc_(o.name) + '</b>' + (o.qty ? ' (' + esc_(o.qty) + ')' : '') + ' add ho gaya\n' +
-      '📅 Expiry: ' + niceDate_(o.expiry) + ' (' + dayWord_(dl) + ')\n' +
-      '🔔 Alert: ' + (alertOn <= today_() ? 'aaj ' + ALERT_TIME.replace(':', '.') + ' wale alert mein' : niceDate_(alertOn)));
+    return say_(chatId, '✅ Added <b>' + esc_(o.name) + '</b>' + (o.qty ? ' (' + esc_(o.qty) + ')' : '') + '\n' +
+      '📅 Expires: ' + niceDate_(o.expiry) + ' (' + dayWord_(dl) + ')\n' +
+      '🔔 Alert: ' + (alertOn <= today_() ? 'in today\'s ' + niceTime_() + ' alert' : niceDate_(alertOn)));
   }
-  if (wasCommand) return say_(chatId, 'Samajh nahi aaya 🤔 Aise likho:\n<code>atta 5kg 20/12/2026</code>');
+  if (wasCommand) return say_(chatId, 'Didn\'t get that 🤔 Try:\n<code>atta 5kg 20/12/2026</code>');
   // baaki normal baatcheet ko ignore karo
 }
 
 function helpText_() {
-  return '<b>Kaise use karein:</b>\n' +
-    '➕ <code>atta 5kg 20/12/2026</code> — item add\n' +
-    '➕ <code>doodh 1L 3din</code> — 3 din mein expiry\n' +
-    '📦 <code>list</code> — poora stock\n' +
-    '⚠️ <code>jaldi</code> — jo jaldi expire hoga\n' +
-    '✔️ <code>khatam atta</code> — khatam, shopping list mein\n' +
-    '🛒 <code>shopping</code> — kya lana hai\n\n' +
-    '<i>Date aise bhi chalegi: 20/12, 20 dec, 2hafte, 6mahine, 1saal</i>';
+  return '<b>How to use:</b>\n' +
+    '➕ <code>atta 5kg 20/12/2026</code> — add an item\n' +
+    '➕ <code>milk 1L 3d</code> — expires in 3 days\n' +
+    '📦 <code>list</code> — full stock\n' +
+    '⚠️ <code>expiring</code> — what expires soon\n' +
+    '✔️ <code>finish atta</code> — used up, moves to shopping list\n' +
+    '🛒 <code>shopping</code> — what to buy\n\n' +
+    '<i>Dates can also be: 20/12, 20 dec, 2w, 6m, 1y</i>';
 }
 
 function activeSorted_() {
@@ -403,9 +406,9 @@ function activeSorted_() {
 
 function listText_() {
   const items = activeSorted_();
-  if (!items.length) return 'Stock khaali hai. Kuch add karo: <code>atta 5kg 20/12/2026</code>';
+  if (!items.length) return 'Nothing in stock yet. Add something: <code>atta 5kg 20/12/2026</code>';
   const t = today_();
-  return '📦 <b>Ghar ka stock (' + items.length + ')</b>\n\n' + items.map(function (o) {
+  return '📦 <b>Home stock (' + items.length + ')</b>\n\n' + items.map(function (o) {
     const dl = daysBetween_(t, o.expiry);
     const dot = dl < 0 ? '🔴' : dl <= Number(o.alertDays) ? '🟠' : '🟢';
     return dot + ' ' + esc_(o.name) + (o.qty ? ' · ' + esc_(o.qty) : '') + ' — ' + dayWord_(dl);
@@ -415,34 +418,34 @@ function listText_() {
 function expiringText_() {
   const t = today_();
   const items = activeSorted_().filter(function (o) { return daysBetween_(t, o.expiry) <= Number(o.alertDays); });
-  if (!items.length) return '🟢 Sab theek hai, abhi kuch expire nahi ho raha.';
-  return '⚠️ <b>Jaldi dhyan do</b>\n\n' + items.map(function (o) {
+  if (!items.length) return '🟢 All good, nothing is expiring soon.';
+  return '⚠️ <b>Use soon</b>\n\n' + items.map(function (o) {
     return (daysBetween_(t, o.expiry) < 0 ? '🔴 ' : '🟠 ') + esc_(o.name) + ' — ' + dayWord_(daysBetween_(t, o.expiry));
   }).join('\n');
 }
 
 function shoppingText_() {
   const items = listItems_().filter(function (o) { return o.status === 'shopping'; });
-  if (!items.length) return '🛒 Shopping list khaali hai.';
-  return '🛒 <b>Lana hai (' + items.length + ')</b>\n\n' + items.map(function (o) { return '▫️ ' + esc_(o.name); }).join('\n');
+  if (!items.length) return '🛒 Shopping list is empty.';
+  return '🛒 <b>To buy (' + items.length + ')</b>\n\n' + items.map(function (o) { return '▫️ ' + esc_(o.name); }).join('\n');
 }
 
 function finishByName_(q) {
   const items = activeSorted_();
   const hit = items.filter(function (o) { return o.name.toLowerCase() === q; })[0] ||
     items.filter(function (o) { return o.name.toLowerCase().indexOf(q) >= 0; })[0];
-  if (!hit) return '"' + esc_(q) + '" stock mein nahi mila. <code>list</code> likh ke dekho.';
+  if (!hit) return 'Couldn\'t find "' + esc_(q) + '" in stock. Send <code>list</code> to check.';
   finishItem_(hit.id);
-  return '✔️ <b>' + esc_(hit.name) + '</b> khatam. Shopping list mein daal diya 🛒';
+  return '✔️ <b>' + esc_(hit.name) + '</b> used up. Added to the shopping list 🛒';
 }
 
 function dayWord_(dl) {
-  if (dl < -1) return Math.abs(dl) + ' din pehle expire';
-  if (dl === -1) return 'kal expire ho gaya';
-  if (dl === 0) return 'aaj expire';
-  if (dl === 1) return 'kal expire';
-  if (dl < 60) return dl + ' din baaki';
-  return Math.round(dl / 30) + ' mahine baaki';
+  if (dl < -1) return 'expired ' + Math.abs(dl) + ' days ago';
+  if (dl === -1) return 'expired yesterday';
+  if (dl === 0) return 'expires today';
+  if (dl === 1) return 'expires tomorrow';
+  if (dl < 60) return dl + ' days left';
+  return Math.round(dl / 30) + ' months left';
 }
 
 const MONTHS_ = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
@@ -565,18 +568,18 @@ function sendDailyAlert_(force) {
 
   let msg = '🔔 <b>Kirana alert</b> · ' + niceDate_(t) + '\n';
   if (lastDay.length) {
-    msg += '\n⏰ <b>Bas ' + (lastDay.some(function (x) { return x[1] === 0; }) ? 'aaj/kal' : 'kal') + ' tak</b>\n' +
+    msg += '\n⏰ <b>Last day</b>\n' +
       lastDay.map(function (x) { return '• ' + esc_(x[0].name) + ' — ' + dayWord_(x[1]); }).join('\n') + '\n';
   }
   if (warn.length) {
-    msg += '\n🟠 <b>Jaldi use karo</b>\n' +
+    msg += '\n🟠 <b>Use soon</b>\n' +
       warn.map(function (x) { return '• ' + esc_(x[0].name) + (x[0].qty ? ' (' + esc_(x[0].qty) + ')' : '') + ' — ' + dayWord_(x[1]); }).join('\n') + '\n';
   }
   if (expired.length) {
-    msg += '\n🔴 <b>Expire ho gaya</b> (fenk do ya khatam mark karo)\n' +
+    msg += '\n🔴 <b>Expired</b> (throw away or mark as used up)\n' +
       expired.map(function (o) { return '• ' + esc_(o.name) + ' — ' + dayWord_(daysBetween_(t, o.expiry)); }).join('\n') + '\n';
   }
-  msg += '\n<i>Khatam ho gaya? Likho: khatam &lt;naam&gt;</i>';
+  msg += '\n<i>Used something up? Send: finish &lt;item&gt;</i>';
   say_(chatId, msg);
   return true;
 }
