@@ -1,5 +1,5 @@
 // Kirana Management — offline support (app ka dhaancha cache hota hai; data hamesha Sheet se aata hai)
-const CACHE = 'kirana-v2';
+const CACHE = 'kirana-v3';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

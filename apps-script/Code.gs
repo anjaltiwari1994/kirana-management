@@ -9,10 +9,12 @@
  * SETUP: sirf neeche wali 2 lines bharo, phir `setup` function ek baar Run karo.
  */
 
-// ============ SIRF YE 2 LINES BHARNI HAIN ============
+// ============ SIRF YE 3 LINES BHARNI HAIN ============
 const TELEGRAM_TOKEN = 'YAHAN_BOTFATHER_WALA_TOKEN_PASTE_KARO';
 const APP_KEY = 'YAHAN_APNA_FAMILY_CODE_LIKHO'; // jaise: ghar@2026 (app mein yahi daalna hoga)
+const GEMINI_KEY = 'YAHAN_GEMINI_API_KEY_PASTE_KARO'; // photo scan ke liye (aistudio.google.com se, free)
 // =====================================================
+const GEMINI_MODELS = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest']; // pehla jo chale
 
 const ALERT_TIME = '16:30';            // roz alert ka time (IST, 24-hour)
 const TZ = 'Asia/Kolkata';
@@ -263,6 +265,10 @@ function doPost(e) {
   try { d = JSON.parse((e && e.postData && e.postData.contents) || '{}'); } catch (x) { return json_({ ok: false, error: 'Bad request' }); }
   if (d.update_id !== undefined) return json_({ ok: true }); // galti se webhook aaya ho toh ignore
   if (d.key !== APP_KEY) return json_({ ok: false, error: 'Wrong family code' });
+  if (d.action === 'scan') { // slow AI call, lock ki zaroorat nahi
+    try { return json_({ ok: true, scan: scanImage_(d.image, d.mime || 'image/jpeg') }); }
+    catch (err) { return json_({ ok: false, error: String(err.message || err) }); }
+  }
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
@@ -343,6 +349,10 @@ function pollTelegram_() {
 function handleMessage_(msg) {
   const props = PropertiesService.getScriptProperties();
   const chatId = String(msg.chat.id);
+  if (msg.photo && msg.photo.length) {
+    if (props.getProperty('CHAT_ID') === chatId) handlePhoto_(msg, chatId);
+    return;
+  }
   let text = String(msg.text || '').trim();
   if (!text) return;
   text = text.replace(/@[A-Za-z0-9_]+bot\b/ig, '').trim(); // "/list@kirana_bot" -> "/list"
@@ -395,7 +405,8 @@ function helpText_() {
     '📦 <code>list</code> — full stock\n' +
     '⚠️ <code>expiring</code> — what expires soon\n' +
     '✔️ <code>finish atta</code> — used up, moves to shopping list\n' +
-    '🛒 <code>shopping</code> — what to buy\n\n' +
+    '🛒 <code>shopping</code> — what to buy\n' +
+    '📸 Send a photo of the packet\'s expiry date — I\'ll add it\n\n' +
     '<i>Dates can also be: 20/12, 20 dec, 2w, 6m, 1y</i>';
 }
 
@@ -582,4 +593,102 @@ function sendDailyAlert_(force) {
   msg += '\n<i>Used something up? Send: finish &lt;item&gt;</i>';
   say_(chatId, msg);
   return true;
+}
+
+/* ------------------------------------------------------------------ */
+/* PHOTO SCAN (Gemini)                                                 */
+/* ------------------------------------------------------------------ */
+function scanPrompt_() {
+  return 'You read Indian grocery packaging. Today is ' + today_() + '.\n' +
+    'From the photo, find the product name, pack quantity and the EXPIRY date.\n' +
+    'Rules:\n' +
+    '- Look for EXP, Expiry, Use by, Best before (BB), MFG/MFD/PKD (manufactured/packed) dates.\n' +
+    '- If a direct expiry/use-by date is printed, use it.\n' +
+    '- If it says "Best before N months/days from manufacture/packing", compute expiry = MFG/PKD date + N.\n' +
+    '- If a date has only month and year: for EXP use the last day of that month; for MFG/PKD use the 1st.\n' +
+    '- Indian dates are day/month/year. "05/26" alone usually means May 2026.\n' +
+    '- If you cannot find enough to determine expiry, set expiry to null. Never guess a date.\n' +
+    '- name: short everyday name in English as people say it (e.g. "Amul Butter", "Aashirvaad Atta"), or null.\n' +
+    '- quantity: like "500g", "1L", "5kg", or null.\n' +
+    'Reply with JSON only: {"name": string|null, "quantity": string|null, "expiry": "YYYY-MM-DD"|null, ' +
+    '"evidence": short string quoting what you read, e.g. "BB 9 months from MFD 05/2026", "confidence": "high"|"medium"|"low"}';
+}
+
+function scanImage_(b64, mime) {
+  if (!GEMINI_KEY || GEMINI_KEY.indexOf('YAHAN') === 0) throw new Error('Photo scan is not set up yet (add GEMINI_KEY in Code.gs)');
+  if (!b64) throw new Error('No photo received');
+  b64 = String(b64).replace(/^data:[^,]+,/, '');
+  const body = {
+    contents: [{ parts: [{ text: scanPrompt_() }, { inline_data: { mime_type: mime, data: b64 } }] }],
+    generationConfig: { temperature: 0, responseMimeType: 'application/json' }
+  };
+  let lastErr = 'Scan failed';
+  for (let i = 0; i < GEMINI_MODELS.length; i++) {
+    const res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODELS[i] +
+      ':generateContent?key=' + encodeURIComponent(GEMINI_KEY), {
+      method: 'post', contentType: 'application/json', payload: JSON.stringify(body), muteHttpExceptions: true
+    });
+    const code = res.getResponseCode();
+    if (code === 404) { lastErr = 'Model not available'; continue; }
+    if (code === 429) throw new Error('Daily free scan limit reached. Try again tomorrow or type it in.');
+    if (code === 400 || code === 403) throw new Error('Gemini key problem: check GEMINI_KEY in Code.gs');
+    if (code !== 200) { lastErr = 'Scan service error (' + code + ')'; continue; }
+    const j = JSON.parse(res.getContentText());
+    const txt = j && j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts &&
+      j.candidates[0].content.parts.map(function (p) { return p.text || ''; }).join('');
+    if (!txt) { lastErr = 'Could not read the photo'; continue; }
+    let out;
+    try { out = JSON.parse(txt.replace(/^```(?:json)?|```$/g, '').trim()); } catch (e) { lastErr = 'Could not read the photo'; continue; }
+    const r = {
+      name: out.name ? String(out.name).slice(0, 60) : '',
+      qty: out.quantity ? String(out.quantity).replace(/\s+/g, '').slice(0, 20) : '',
+      expiry: isISO_(out.expiry) && mk_(Number(out.expiry.slice(0, 4)), Number(out.expiry.slice(5, 7)), Number(out.expiry.slice(8, 10))) ? out.expiry : '',
+      evidence: out.evidence ? String(out.evidence).slice(0, 120) : '',
+      confidence: /^(high|medium|low)$/.test(out.confidence) ? out.confidence : 'low'
+    };
+    if (r.name) r.category = guessCategory_(r.name);
+    if (r.expiry) r.alertDays = autoAlert_(today_(), r.expiry < today_() ? today_() : r.expiry);
+    return r;
+  }
+  throw new Error(lastErr);
+}
+
+function handlePhoto_(msg, chatId) {
+  const by = (msg.from && (msg.from.first_name || msg.from.username)) || 'Telegram';
+  // sabse bada size jo ~1600px se chhota ho
+  const sizes = msg.photo.slice().sort(function (a, b) { return a.width - b.width; });
+  let pick = sizes[sizes.length - 1];
+  for (let i = sizes.length - 1; i >= 0; i--) { if (Math.max(sizes[i].width, sizes[i].height) <= 1600) { pick = sizes[i]; break; } }
+  const f = tg_('getFile', { file_id: pick.file_id });
+  if (!f || !f.ok) return say_(chatId, 'Couldn\'t download that photo. Try again?');
+  let r;
+  try {
+    const blob = UrlFetchApp.fetch('https://api.telegram.org/file/bot' + TELEGRAM_TOKEN + '/' + f.result.file_path).getBlob();
+    r = scanImage_(Utilities.base64Encode(blob.getBytes()), 'image/jpeg');
+  } catch (e) {
+    return say_(chatId, '📸 ' + esc_(e.message || e));
+  }
+  // caption se naam/quantity override: "amul butter 500g"
+  const cap = String(msg.caption || '').trim();
+  if (cap) {
+    const toks = cap.split(/\s+/);
+    const q = toks.filter(function (t) { return /^\d+(\.\d+)?(kg|g|gm|l|ltr|ml|pc|pcs|pkt)$/i.test(t); })[0];
+    const n = toks.filter(function (t) { return t !== q; }).join(' ').trim();
+    if (n) r.name = n;
+    if (q) r.qty = q;
+  }
+  if (!r.expiry) {
+    return say_(chatId, '🤔 Couldn\'t find an expiry date' + (r.evidence ? ' (read: <i>' + esc_(r.evidence) + '</i>)' : '') +
+      '.\nTry a closer, sharper photo of the date, or type it: <code>' + esc_(r.name || 'item') + ' ' + esc_(r.qty || '') + ' 20/12/2026</code>');
+  }
+  if (!r.name) {
+    return say_(chatId, '📅 Expiry looks like <b>' + niceDate_(r.expiry) + '</b>' + (r.evidence ? ' (<i>' + esc_(r.evidence) + '</i>)' : '') +
+      '\nBut I couldn\'t tell what the item is. Resend the photo with the name as caption, e.g. <i>Amul butter</i>.');
+  }
+  const o = addItem_({ name: r.name, qty: r.qty, expiry: r.expiry, category: r.category }, by);
+  const dl = daysBetween_(today_(), o.expiry);
+  return say_(chatId, '📸✅ Added <b>' + esc_(o.name) + '</b>' + (o.qty ? ' (' + esc_(o.qty) + ')' : '') + '\n' +
+    '📅 Expires: ' + niceDate_(o.expiry) + ' (' + dayWord_(dl) + ')' + (r.evidence ? '\n🔎 <i>' + esc_(r.evidence) + '</i>' : '') +
+    (r.confidence === 'low' ? '\n⚠️ Not fully sure — please double-check in the app.' : '') +
+    '\n<i>Wrong? Fix it in the app, or send: finish ' + esc_(o.name.toLowerCase()) + '</i>');
 }

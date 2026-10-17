@@ -28,6 +28,7 @@ Har item ke liye app mein badal bhi sakte ho. Har item ka alert ek baar aata hai
 | `jaldi` | jo jaldi expire hoga |
 | `khatam atta` | khatam → shopping list |
 | `shopping` | kya lana hai |
+| 📸 photo | packet ki expiry wali photo bhejo, bot khud add karega (caption mein naam likh sakte ho) |
 
 Bot har minute naye messages check karta hai, isliye reply mein ~1 minute lag sakta hai.
 
@@ -36,7 +37,7 @@ Bot har minute naye messages check karta hai, isliye reply mein ~1 minute lag sa
 ### 1. Google Sheet
 1. Sheet kholo → **Extensions → Apps Script**
 2. Jo code pehle se hai, sab hata do. `apps-script/Code.gs` ka poora code paste karo
-3. Upar ki 2 lines bharo: `TELEGRAM_TOKEN` (BotFather wala) aur `APP_KEY` (apna family code)
+3. Upar ki 3 lines bharo: `TELEGRAM_TOKEN` (BotFather wala), `APP_KEY` (apna family code), `GEMINI_KEY` (photo scan ke liye, [aistudio.google.com/apikey](https://aistudio.google.com/apikey) se free)
 4. **Save** (💾), phir upar function list mein `setup` chuno → **Run**
 5. Permission maangega → **Review permissions** → apna account → **Advanced → Go to … (unsafe)** → **Allow**
    (ye tumhara khud ka code hai, isliye Google "unverified" bolta hai)

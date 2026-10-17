@@ -158,6 +158,14 @@ main{padding:4px max(16px,env(safe-area-inset-right,0px)) calc(var(--tabh) + env
 .qchips{display:flex;flex-wrap:wrap;gap:6px}
 .qchip{padding:7px 12px;border-radius:10px;background:var(--sunk);font-size:14px;font-weight:500}
 .qchip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.scan-btn{width:100%;display:flex;align-items:center;gap:12px;text-align:left;padding:12px 14px;border-radius:14px;margin-bottom:16px;
+  border:1.5px dashed var(--accent);background:var(--ok-soft);color:var(--ink)}
+.scan-btn .cam{width:42px;height:42px;border-radius:12px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;flex:none}
+.scan-btn .cam svg{width:22px;height:22px;stroke:currentColor}
+.scan-btn b{display:block;font-size:16px} .scan-btn small{display:block;color:var(--muted);font-size:13px}
+.scan-btn[aria-busy="true"] .cam{animation:pulse 1s infinite}
+.scan-note{font-size:13px;border-radius:12px;padding:10px 12px;margin:-6px 0 16px;background:var(--sunk);color:var(--ink)}
+.scan-note.warn{background:var(--warn-soft)} .scan-note.bad{background:var(--bad-soft)}
 .alert-note{display:flex;align-items:center;gap:10px;background:var(--haldi-soft);border-radius:12px;padding:10px 12px;font-size:14px;margin-bottom:16px}
 .alert-note svg{width:20px;height:20px;stroke:var(--haldi);flex:none}
 .alert-note select{margin-left:auto;border:0;background:var(--surface);border-radius:8px;padding:4px 6px;font-weight:600;font-size:14px}
@@ -266,6 +274,12 @@ main{padding:4px max(16px,env(safe-area-inset-right,0px)) calc(var(--tabh) + env
   <div class="grab"></div>
   <h3 id="addTitle">Add to stock</h3>
   <form id="addForm" autocomplete="off">
+    <button type="button" class="scan-btn" id="btnScan" aria-busy="false">
+      <span class="cam"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg></span>
+      <span><b id="scanTitle">Scan packet</b><small id="scanSub">Photo of the expiry date fills this in</small></span>
+    </button>
+    <input type="file" id="scanInput" accept="image/*" capture="environment" hidden>
+    <div class="scan-note" id="scanNote" hidden></div>
     <div class="field"><label for="fName">Item</label>
       <input class="inp" id="fName" list="nameList" placeholder="e.g. Atta, Milk, Paneer" required enterkeyhint="next">
       <datalist id="nameList"></datalist></div>
@@ -490,7 +504,8 @@ function render() {
       ['milk 1L 3d', 'Expires in 3 days (also 2w, 6m, 1y)'],
       ['paneer 200g 20 dec', 'Month names work too'],
       ['list', 'Full stock'], ['expiring', 'What expires soon'],
-      ['finish atta', 'Used up → shopping list'], ['shopping', 'What to buy']
+      ['finish atta', 'Used up → shopping list'], ['shopping', 'What to buy'],
+      ['📸 photo', 'Send a photo of the expiry date; caption it with the name if needed']
     ].map(([c, d]) => `<div class="shop"><span class="meta"><span class="name"><code>${c}</code></span><span class="sub">${d}</span></span></div>`).join('')}</div></div>
     <div class="sec"><h2>When alerts arrive</h2><div class="list"><div class="shop"><span class="meta"><span class="sub" style="white-space:normal">
     Daily at <b>4:30 PM</b>, only when something is about to expire. The longer an item lasts, the earlier you're warned: up to 7 days → 1 day before · up to 1 month → 3 days · up to 6 months → 1 week · longer → 1 month before.</span></span></div></div></div>`;
@@ -563,8 +578,8 @@ function openForm(mode, it) {
   $('#fAlert').value = mode === 'edit' ? String(it.alertDays) : 'auto';
   if (![...$('#fAlert').options].some(o => o.value === $('#fAlert').value)) $('#fAlert').value = 'auto';
   pickedCat = it?.category || null; catTouched = !!it;
+  $('#scanNote').hidden = true; $('#btnScan').hidden = mode === 'edit'; setScanBusy(false);
   renderCatChips(); updateAlertTxt(); showSheet($('#addSheet'));
-  if (mode === 'add') setTimeout(() => $('#fName').focus(), 300);
 }
 $('#btnAdd').onclick = () => openForm('add');
 $('#fName').oninput = e => { if (!catTouched) { pickedCat = e.target.value.trim() ? guessCat(e.target.value) : null; renderCatChips(); } };
@@ -577,6 +592,46 @@ $('#quickDates').onclick = e => {
   $('#fExp').value = b.dataset.d ? addDays(t, Number(b.dataset.d)) : addMonths(t, Number(b.dataset.m));
   updateAlertTxt(); b.setAttribute('aria-pressed', 'true');
 };
+/* ---------- camera scan ---------- */
+function setScanBusy(b) {
+  $('#btnScan').setAttribute('aria-busy', String(b)); $('#btnScan').disabled = b;
+  $('#scanTitle').textContent = b ? 'Reading the packet…' : 'Scan packet';
+  $('#scanSub').textContent = b ? 'Takes a few seconds' : 'Photo of the expiry date fills this in';
+}
+function scanNote(html, kind) { const n = $('#scanNote'); n.innerHTML = html; n.className = 'scan-note' + (kind ? ' ' + kind : ''); n.hidden = false; }
+function shrinkImage(file, max = 1600) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+      resolve(c.toDataURL('image/jpeg', 0.85).split(',')[1]);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Couldn\'t open that photo')); };
+    img.src = url;
+  });
+}
+$('#btnScan').onclick = () => { $('#scanInput').value = ''; $('#scanInput').click(); };
+$('#scanInput').onchange = async e => {
+  const file = e.target.files && e.target.files[0]; if (!file) return;
+  setScanBusy(true); $('#scanNote').hidden = true;
+  try {
+    const image = await shrinkImage(file);
+    const { scan: r } = await api('scan', { image, mime: 'image/jpeg' });
+    if (r.name && (!$('#fName').value.trim() || formMode.type === 'add')) { $('#fName').value = r.name; if (!catTouched) { pickedCat = r.category || guessCat(r.name); renderCatChips(); } }
+    if (r.qty && !$('#fQty').value.trim()) $('#fQty').value = r.qty;
+    const ev = r.evidence ? ` <i>(${esc(r.evidence)})</i>` : '';
+    if (r.expiry) {
+      $('#fExp').value = r.expiry; updateAlertTxt();
+      if (r.expiry < todayISO()) scanNote(`⚠️ This looks already expired: <b>${niceDate(r.expiry)}</b>${ev}`, 'bad');
+      else if (r.confidence === 'low') scanNote(`🤔 Not fully sure. Please check the date.${ev}`, 'warn');
+      else scanNote(`✅ Read expiry <b>${niceDate(r.expiry)}</b>${ev}`);
+    } else scanNote(`Couldn't find the expiry date${ev}. Try a closer, sharper photo of the date, or pick it below.`, 'warn');
+  } catch (err) { scanNote(esc(err.message), 'bad'); }
+  finally { setScanBusy(false); }
+};
+
 $('#addForm').onsubmit = async e => {
   e.preventDefault();
   const name = $('#fName').value.trim(), expiry = $('#fExp').value;
