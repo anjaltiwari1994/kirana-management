@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="hi">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <title>Kirana Management</title>
-<meta name="description" content="Ghar ka kirana stock, expiry alerts aur shopping list">
+<meta name="description" content="Home grocery stock, expiry alerts and shopping list">
 <meta name="theme-color" content="#1F5E43" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0F1714" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -200,16 +200,16 @@ main{padding:4px max(16px,env(safe-area-inset-right,0px)) calc(var(--tabh) + env
 <section class="setup" id="setup" hidden>
   <img class="logo" src="icons/icon-192.png" alt="">
   <h1>Kirana Management</h1>
-  <p>Ghar ka stock, expiry alert aur shopping list. Shuru karne ke liye Google Sheet wala link aur family code daalo.</p>
+  <p>Your home grocery stock, expiry alerts and shopping list. Add your Google Sheet web app link and family code to get started.</p>
   <form id="setupForm" autocomplete="off">
-    <div class="field"><label for="sApi">Sheet ka Web App link</label>
+    <div class="field"><label for="sApi">Sheet web app link</label>
       <input class="inp" id="sApi" type="url" placeholder="https://script.google.com/macros/s/…/exec" required></div>
     <div class="field"><label for="sKey">Family code</label>
-      <input class="inp" id="sKey" type="text" placeholder="jo Code.gs mein APP_KEY likha tha" required></div>
-    <div class="field"><label for="sName">Aapka naam</label>
-      <input class="inp" id="sName" type="text" placeholder="jaise Pranjal" required></div>
+      <input class="inp" id="sKey" type="text" placeholder="The APP_KEY from Code.gs" required></div>
+    <div class="field"><label for="sName">Your name</label>
+      <input class="inp" id="sName" type="text" placeholder="e.g. Pranjal" required></div>
     <div class="err" id="sErr" hidden></div>
-    <button class="btn primary block" id="sBtn" type="submit">Shuru karo</button>
+    <button class="btn primary block" id="sBtn" type="submit">Get started</button>
   </form>
 </section>
 
@@ -218,7 +218,7 @@ main{padding:4px max(16px,env(safe-area-inset-right,0px)) calc(var(--tabh) + env
   <header class="top">
     <div class="top-row">
       <div class="brand">
-        <small><span class="sync-dot" id="syncDot"></span><span id="syncTxt">Ghar ka stock</span></small>
+        <small><span class="sync-dot" id="syncDot"></span><span id="syncTxt">Home stock</span></small>
         <h1 id="viewTitle">Kirana Management</h1>
       </div>
       <button class="icon-btn" id="btnSettings" aria-label="Settings">
@@ -227,18 +227,18 @@ main{padding:4px max(16px,env(safe-area-inset-right,0px)) calc(var(--tabh) + env
     </div>
     <div id="stockTools">
       <div class="summary">
-        <button class="sum bad" data-f="bad" aria-pressed="false"><b class="num" id="cBad">0</b><span>Expire</span></button>
-        <button class="sum warn" data-f="warn" aria-pressed="false"><b class="num" id="cWarn">0</b><span>Jaldi</span></button>
-        <button class="sum ok" data-f="ok" aria-pressed="false"><b class="num" id="cOk">0</b><span>Theek</span></button>
+        <button class="sum bad" data-f="bad" aria-pressed="false"><b class="num" id="cBad">0</b><span>Expired</span></button>
+        <button class="sum warn" data-f="warn" aria-pressed="false"><b class="num" id="cWarn">0</b><span>Expiring</span></button>
+        <button class="sum ok" data-f="ok" aria-pressed="false"><b class="num" id="cOk">0</b><span>Fresh</span></button>
       </div>
       <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        <input id="q" type="search" placeholder="Dhoondo… atta, doodh" enterkeyhint="search" aria-label="Dhoondo"></label>
+        <input id="q" type="search" placeholder="Search… atta, milk" enterkeyhint="search" aria-label="Search"></label>
       <div class="chips" id="cats"></div>
     </div>
   </header>
 
   <main>
-    <div class="banner" id="offline" hidden>📴 Internet nahi hai. Aakhri saved list dikh rahi hai.</div>
+    <div class="banner" id="offline" hidden>📴 You're offline. Showing the last saved list.</div>
     <section class="view" id="vStock"></section>
     <section class="view" id="vSoon" hidden></section>
     <section class="view" id="vShop" hidden></section>
@@ -249,8 +249,8 @@ main{padding:4px max(16px,env(safe-area-inset-right,0px)) calc(var(--tabh) + env
     <button class="tab" role="tab" data-v="vStock" aria-selected="true">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 4l9 5.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 21v-7h6v7"/></svg>Stock</button>
     <button class="tab" role="tab" data-v="vSoon" aria-selected="false">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>Jaldi<span class="badge num" id="bSoon" hidden></span></button>
-    <button class="fab" id="btnAdd" aria-label="Item add karo">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>Expiring<span class="badge num" id="bSoon" hidden></span></button>
+    <button class="fab" id="btnAdd" aria-label="Add item">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
     <button class="tab" role="tab" data-v="vShop" aria-selected="false">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14l-1.2 11.1a2 2 0 0 1-2 1.9H8.2a2 2 0 0 1-2-1.9z"/><path d="M9 10V6a3 3 0 0 1 6 0v4"/></svg>Shopping<span class="badge num" id="bShop" hidden style="background:var(--accent);color:var(--accent-ink)"></span></button>
@@ -264,34 +264,34 @@ main{padding:4px max(16px,env(safe-area-inset-right,0px)) calc(var(--tabh) + env
 <!-- Add / edit sheet -->
 <div class="sheet" id="addSheet" role="dialog" aria-modal="true" aria-labelledby="addTitle" hidden>
   <div class="grab"></div>
-  <h3 id="addTitle">Stock mein daalo</h3>
+  <h3 id="addTitle">Add to stock</h3>
   <form id="addForm" autocomplete="off">
-    <div class="field"><label for="fName">Kya hai?</label>
-      <input class="inp" id="fName" list="nameList" placeholder="jaise Atta, Doodh, Paneer" required enterkeyhint="next">
+    <div class="field"><label for="fName">Item</label>
+      <input class="inp" id="fName" list="nameList" placeholder="e.g. Atta, Milk, Paneer" required enterkeyhint="next">
       <datalist id="nameList"></datalist></div>
     <div class="two">
-      <div class="field"><label for="fQty">Kitna</label><input class="inp" id="fQty" placeholder="5 kg"></div>
+      <div class="field"><label for="fQty">Quantity</label><input class="inp" id="fQty" placeholder="5 kg"></div>
       <div class="field"><label for="fExp">Expiry date</label><input class="inp" id="fExp" type="date" required></div>
     </div>
-    <div class="field"><span class="lbl">Ya jaldi chuno</span>
+    <div class="field"><span class="lbl">Quick pick</span>
       <div class="qchips" id="quickDates">
-        <button type="button" class="qchip" data-d="3">3 din</button>
-        <button type="button" class="qchip" data-d="7">1 hafta</button>
-        <button type="button" class="qchip" data-m="1">1 mahina</button>
-        <button type="button" class="qchip" data-m="3">3 mahine</button>
-        <button type="button" class="qchip" data-m="6">6 mahine</button>
-        <button type="button" class="qchip" data-m="12">1 saal</button>
+        <button type="button" class="qchip" data-d="3">3 days</button>
+        <button type="button" class="qchip" data-d="7">1 week</button>
+        <button type="button" class="qchip" data-m="1">1 month</button>
+        <button type="button" class="qchip" data-m="3">3 months</button>
+        <button type="button" class="qchip" data-m="6">6 months</button>
+        <button type="button" class="qchip" data-m="12">1 year</button>
       </div></div>
     <div class="field"><span class="lbl">Category</span><div class="qchips" id="fCats"></div></div>
     <div class="alert-note">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>
-      <span id="alertTxt">Expiry chuno, alert khud set ho jaayega</span>
-      <select id="fAlert" aria-label="Kitne din pehle alert">
-        <option value="auto">Auto</option><option value="1">1 din</option><option value="3">3 din</option>
-        <option value="7">1 hafta</option><option value="15">15 din</option><option value="30">1 mahina</option>
+      <span id="alertTxt">Pick an expiry date and the alert sets itself</span>
+      <select id="fAlert" aria-label="Alert how many days before">
+        <option value="auto">Auto</option><option value="1">1 day</option><option value="3">3 days</option>
+        <option value="7">1 week</option><option value="15">15 days</option><option value="30">1 month</option>
       </select>
     </div>
-    <button class="btn primary block" id="fSave" type="submit">Stock mein daalo</button>
+    <button class="btn primary block" id="fSave" type="submit">Add to stock</button>
   </form>
 </div>
 
@@ -306,14 +306,14 @@ main{padding:4px max(16px,env(safe-area-inset-right,0px)) calc(var(--tabh) + env
   <div class="grab"></div>
   <h3 id="setTitle">Settings</h3>
   <form id="setForm" autocomplete="off">
-    <div class="field"><label for="eName">Aapka naam</label><input class="inp" id="eName" required></div>
-    <div class="field"><label for="eApi">Sheet ka Web App link</label><input class="inp" id="eApi" type="url" required></div>
+    <div class="field"><label for="eName">Your name</label><input class="inp" id="eName" required></div>
+    <div class="field"><label for="eApi">Sheet web app link</label><input class="inp" id="eApi" type="url" required></div>
     <div class="field"><label for="eKey">Family code</label><input class="inp" id="eKey" required></div>
-    <button class="btn primary block" type="submit">Save karo</button>
+    <button class="btn primary block" type="submit">Save</button>
   </form>
-  <div class="field" style="margin-top:18px"><span class="lbl">Ghar walon ko jodo</span>
-    <button class="btn soft block" id="btnInvite" type="button">Setup link share karo</button>
-    <div class="hint">Is link se dusre phone pe app seedha set ho jaayegi. Sirf ghar walon ko bhejna.</div></div>
+  <div class="field" style="margin-top:18px"><span class="lbl">Add family members</span>
+    <button class="btn soft block" id="btnInvite" type="button">Share setup link</button>
+    <div class="hint">This link sets up the app on another phone in one tap. Share it only with family.</div></div>
 </div>
 
 <div class="toast" id="toast" role="status"><span id="toastTxt"></span><button id="toastUndo" hidden>Undo</button></div>
@@ -331,7 +331,7 @@ const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','
 
 let cfg = { api: LS.get('api', ''), key: LS.get('key', ''), name: LS.get('name', '') };
 let items = LS.get('items', []);
-let view = 'vStock', catFilter = 'Sab', statusFilter = null, query = '';
+let view = 'vStock', catFilter = 'All', statusFilter = null, query = '';
 
 /* ---------- setup link: ?api=…&key=… ---------- */
 const params = new URLSearchParams(location.search);
@@ -351,15 +351,15 @@ const addMonths = (iso, n) => { let [y, m, d] = iso.split('-').map(Number); m +=
   const last = new Date(Date.UTC(y, m, 0)).getUTCDate(); return y + '-' + pad(m) + '-' + pad(Math.min(d, last)); };
 const autoAlert = (from, exp) => { const life = daysBetween(from, exp); return life <= 7 ? 1 : life <= 31 ? 3 : life <= 180 ? 7 : 30; };
 const niceDate = iso => { const [y, m, d] = iso.split('-').map(Number); return d + ' ' + MON[m - 1] + (y !== new Date().getFullYear() ? ' ' + y : ''); };
-const alertWord = n => n >= 30 ? '1 mahina' : n === 7 ? '1 hafta' : n + ' din';
+const alertWord = n => n >= 30 ? '1 month' : n === 7 ? '1 week' : n === 1 ? '1 day' : n + ' days';
 function dayWord(dl) {
-  if (dl < -1) return Math.abs(dl) + ' din pehle';
-  if (dl === -1) return 'kal expire hua';
-  if (dl === 0) return 'aaj expire';
-  if (dl === 1) return 'kal tak';
-  if (dl < 60) return dl + ' din';
-  if (dl < 365) return Math.round(dl / 30) + ' mahine';
-  return (Math.round(dl / 36.5) / 10) + ' saal';
+  if (dl < -1) return Math.abs(dl) + ' days ago';
+  if (dl === -1) return 'yesterday';
+  if (dl === 0) return 'today';
+  if (dl === 1) return 'tomorrow';
+  if (dl < 60) return dl + ' days';
+  if (dl < 365) return Math.round(dl / 30) + ' months';
+  const y = Math.round(dl / 36.5) / 10; return y + (y === 1 ? ' year' : ' years');
 }
 function state(it) {
   const dl = daysBetween(todayISO(), it.expiry);
@@ -383,21 +383,22 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 let syncing = 0;
 function setSync(mode, txt) {
   const dot = $('#syncDot'); dot.className = 'sync-dot' + (mode === 'busy' ? ' busy' : mode === 'off' ? ' off' : '');
-  $('#syncTxt').textContent = txt || (mode === 'off' ? 'Offline' : 'Ghar ka stock');
+  $('#syncTxt').textContent = txt || (mode === 'off' ? 'Offline' : 'Home stock');
 }
 async function api(action, data) {
-  syncing++; setSync('busy', 'Sync ho raha hai…');
+  syncing++; setSync('busy', 'Syncing…');
   try {
     let res;
     if (action === 'list') res = await fetch(cfg.api + (cfg.api.includes('?') ? '&' : '?') + 'key=' + encodeURIComponent(cfg.key) + '&t=' + Date.now());
     else res = await fetch(cfg.api, { method: 'POST', body: JSON.stringify({ ...data, action, key: cfg.key, by: cfg.name }) });
     const j = await res.json();
-    if (!j.ok) throw new Error(j.error || 'Kuch gadbad hui');
+    if (!j.ok) { const EN = { 'Family code galat hai': 'Wrong family code', 'Item nahi mila': 'Item not found', 'Expiry date chahiye': 'Expiry date is required', 'Item ka naam chahiye': 'Item name is required', 'Expiry date galat hai': 'Invalid expiry date' };
+      throw new Error(EN[j.error] || j.error || 'Something went wrong'); }
     if (j.items) { items = j.items; LS.set('items', items); }
     $('#offline').hidden = true;
     return j;
   } catch (e) {
-    if (e instanceof TypeError) { $('#offline').hidden = navigator.onLine; throw new Error(navigator.onLine ? 'Sheet se connect nahi ho paaya' : 'Internet nahi hai'); }
+    if (e instanceof TypeError) { $('#offline').hidden = navigator.onLine; throw new Error(navigator.onLine ? 'Couldn\'t reach your Sheet' : 'You\'re offline'); }
     throw e;
   } finally {
     syncing--; if (!syncing) setSync(navigator.onLine ? 'ok' : 'off');
@@ -426,10 +427,10 @@ function cardHTML(it) {
   const [, m, d] = it.expiry.split('-').map(Number);
   const sub = [it.qty, it.category].filter(Boolean).join(' · ');
   return `<div class="item ${s}" data-id="${esc(it.id)}">
-    <div class="swipe-bg"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>Khatam</div>
+    <div class="swipe-bg"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>Done</div>
     <button class="card" type="button">
       <span class="tag"><b>${d}</b><span>${MON[m - 1]}</span></span>
-      <span class="meta"><span class="name">${esc(it.name)}</span><span class="sub">${esc(sub || 'Expiry ' + niceDate(it.expiry))}</span></span>
+      <span class="meta"><span class="name">${esc(it.name)}</span><span class="sub">${esc(sub || 'Expires ' + niceDate(it.expiry))}</span></span>
       <span class="pill num">${dayWord(dl)}</span>
     </button></div>`;
 }
@@ -451,48 +452,48 @@ function render() {
 
   // category chips
   const present = new Set(all.map(i => i.category || 'Other'));
-  const cats = ['Sab', ...CATS.filter(c => present.has(c))];
-  if (!cats.includes(catFilter)) catFilter = 'Sab';
+  const cats = ['All', ...CATS.filter(c => present.has(c))];
+  if (!cats.includes(catFilter)) catFilter = 'All';
   $('#cats').innerHTML = cats.length > 2 ? cats.map(c => `<button class="chip" data-c="${c}" aria-pressed="${c === catFilter}">${c}</button>`).join('') : '';
 
   // stock view
   const q = query.trim().toLowerCase();
-  const pass = x => (catFilter === 'Sab' || (x.i.category || 'Other') === catFilter) && (!q || x.i.name.toLowerCase().includes(q)) && (!statusFilter || x.s === statusFilter);
+  const pass = x => (catFilter === 'All' || (x.i.category || 'Other') === catFilter) && (!q || x.i.name.toLowerCase().includes(q)) && (!statusFilter || x.s === statusFilter);
   const fb = bad.filter(pass), fw = warn.filter(pass), fo = ok.filter(pass);
-  let html = section('Expire ho gaya', fb.map(x => x.i)) + section('Jaldi use karo', fw.map(x => x.i)) + section('Sab theek', fo.map(x => x.i));
-  if (!all.length) html = `<div class="empty">${emptyIcon}<div class="big">Stock khaali hai</div>Neeche <b>+</b> dabao ya Telegram group mein likho<br><code>atta 5kg 20/12/2026</code></div>`;
-  else if (!html) html = `<div class="empty"><div class="big">Kuch nahi mila</div>Filter ya search badal ke dekho.</div>`;
-  else html += `<p class="hint">Item ko left swipe karo = khatam · Tap = details</p>`;
+  let html = section('Expired', fb.map(x => x.i)) + section('Use soon', fw.map(x => x.i)) + section('Fresh', fo.map(x => x.i));
+  if (!all.length) html = `<div class="empty">${emptyIcon}<div class="big">Nothing in stock yet</div>Tap <b>+</b> below, or send this in the Telegram group<br><code>atta 5kg 20/12/2026</code></div>`;
+  else if (!html) html = `<div class="empty"><div class="big">No matches</div>Try a different filter or search.</div>`;
+  else html += `<p class="hint">Swipe left to mark as used up · Tap for details</p>`;
   $('#vStock').innerHTML = html;
 
   // soon view
   $('#vSoon').innerHTML = soonN
-    ? section('Expire ho gaya', bad.map(x => x.i)) + section('Jaldi use karo', warn.map(x => x.i))
-    : `<div class="empty">${emptyIcon}<div class="big">Sab theek hai 🎉</div>Abhi kuch bhi expire nahi ho raha.</div>`;
+    ? section('Expired', bad.map(x => x.i)) + section('Use soon', warn.map(x => x.i))
+    : `<div class="empty">${emptyIcon}<div class="big">All good 🎉</div>Nothing is expiring right now.</div>`;
 
   // shopping view
   const sh = shopping();
-  $('#vShop').innerHTML = `<form class="quick-add" id="shopForm"><input class="inp" id="shopInp" placeholder="Lana hai… jaise Sabun" enterkeyhint="done" aria-label="Shopping item"><button class="btn primary" type="submit">Add</button></form>` +
-    (sh.length ? `<div class="sec"><h2>Lana hai <i>${sh.length}</i></h2><div class="list">${sh.map(it => `
+  $('#vShop').innerHTML = `<form class="quick-add" id="shopForm"><input class="inp" id="shopInp" placeholder="Need to buy… e.g. Soap" enterkeyhint="done" aria-label="Shopping item"><button class="btn primary" type="submit">Add</button></form>` +
+    (sh.length ? `<div class="sec"><h2>To buy <i>${sh.length}</i></h2><div class="list">${sh.map(it => `
       <div class="shop" data-id="${esc(it.id)}"><span class="box"></span>
-        <span class="meta"><span class="name">${esc(it.name)}</span>${it.qty ? `<span class="sub">Pichhli baar: ${esc(it.qty)}</span>` : ''}</span>
-        <button class="btn small soft" data-act="restock" type="button">Le aaye</button>
-        <button class="icon-btn" style="width:34px;height:34px;box-shadow:none;background:none" data-act="drop" type="button" aria-label="Hatao"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+        <span class="meta"><span class="name">${esc(it.name)}</span>${it.qty ? `<span class="sub">Last time: ${esc(it.qty)}</span>` : ''}</span>
+        <button class="btn small soft" data-act="restock" type="button">Bought</button>
+        <button class="icon-btn" style="width:34px;height:34px;box-shadow:none;background:none" data-act="drop" type="button" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
       </div>`).join('')}</div></div>
-      <button class="btn soft block" id="btnShare" type="button">List share karo (WhatsApp)</button>`
-    : `<div class="empty">${emptyIcon}<div class="big">Kuch nahi lana</div>Jo khatam hoga, wo apne aap yahan aa jaayega.</div>`);
+      <button class="btn soft block" id="btnShare" type="button">Share list (WhatsApp)</button>`
+    : `<div class="empty">${emptyIcon}<div class="big">Nothing to buy</div>Items you mark as used up show up here.</div>`);
 
   // telegram view
-  $('#vInfo').innerHTML = `<div class="sec"><h2>Telegram se kaise use karein</h2>
+  $('#vInfo').innerHTML = `<div class="sec"><h2>Using it from Telegram</h2>
     <div class="list">${[
-      ['atta 5kg 20/12/2026', 'Item add (naam, kitna, expiry)'],
-      ['doodh 1L 3din', 'Expiry 3 din baad'],
-      ['paneer 200g 20 dec', 'Mahine ke naam se bhi'],
-      ['list', 'Poora stock'], ['jaldi', 'Jo jaldi expire hoga'],
-      ['khatam atta', 'Khatam → shopping list'], ['shopping', 'Kya lana hai']
+      ['atta 5kg 20/12/2026', 'Add an item (name, quantity, expiry)'],
+      ['milk 1L 3d', 'Expires in 3 days (also 2w, 6m, 1y)'],
+      ['paneer 200g 20 dec', 'Month names work too'],
+      ['list', 'Full stock'], ['expiring', 'What expires soon'],
+      ['finish atta', 'Used up → shopping list'], ['shopping', 'What to buy']
     ].map(([c, d]) => `<div class="shop"><span class="meta"><span class="name"><code>${c}</code></span><span class="sub">${d}</span></span></div>`).join('')}</div></div>
-    <div class="sec"><h2>Alert kab aata hai</h2><div class="list"><div class="shop"><span class="meta"><span class="sub" style="white-space:normal">
-    Roz <b>4:30 PM</b>, sirf jab kuch expire hone wala ho. Item jitna lamba chalta hai, utna pehle alert: 7 din tak wala → 1 din pehle · 1 mahine tak → 3 din · 6 mahine tak → 1 hafta · usse zyada → 1 mahina pehle.</span></span></div></div></div>`;
+    <div class="sec"><h2>When alerts arrive</h2><div class="list"><div class="shop"><span class="meta"><span class="sub" style="white-space:normal">
+    Daily at <b>4:30 PM</b>, only when something is about to expire. The longer an item lasts, the earlier you're warned: up to 7 days → 1 day before · up to 1 month → 3 days · up to 6 months → 1 week · longer → 1 month before.</span></span></div></div></div>`;
 
   // name suggestions
   const names = [...new Set(items.map(i => i.name))].slice(0, 80);
@@ -500,7 +501,7 @@ function render() {
 }
 
 /* ---------- tabs ---------- */
-const titles = { vStock: 'Kirana Management', vSoon: 'Jaldi use karo', vShop: 'Shopping list', vInfo: 'Telegram' };
+const titles = { vStock: 'Kirana Management', vSoon: 'Use soon', vShop: 'Shopping list', vInfo: 'Telegram' };
 function go(v) {
   view = v;
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.v === v)));
@@ -545,17 +546,17 @@ function renderCatChips() {
 function updateAlertTxt() {
   const exp = $('#fExp').value, sel = $('#fAlert').value;
   document.querySelectorAll('#quickDates .qchip').forEach(b => b.setAttribute('aria-pressed', 'false'));
-  if (!exp) { $('#alertTxt').textContent = 'Expiry chuno, alert khud set ho jaayega'; return; }
+  if (!exp) { $('#alertTxt').textContent = 'Pick an expiry date and the alert sets itself'; return; }
   const t = todayISO(), dl = daysBetween(t, exp);
-  if (dl < 0) { $('#alertTxt').textContent = 'Ye date nikal chuki hai'; return; }
+  if (dl < 0) { $('#alertTxt').textContent = 'This date has already passed'; return; }
   const n = sel === 'auto' ? autoAlert(formMode.addedOn || t, exp) : Number(sel);
   const on = addDays(exp, -n);
-  $('#alertTxt').innerHTML = `Alert <b>${alertWord(n)} pehle</b>: ${on <= t ? 'aaj 4:30 PM' : niceDate(on)}`;
+  $('#alertTxt').innerHTML = `Alert <b>${alertWord(n)} before</b>: ${on <= t ? 'today 4:30 PM' : niceDate(on)}`;
 }
 function openForm(mode, it) {
   formMode = { type: mode, id: it?.id, addedOn: mode === 'edit' ? it.addedOn : null };
-  $('#addTitle').textContent = mode === 'edit' ? 'Badlo' : mode === 'restock' ? `${it.name} le aaye 👍` : 'Stock mein daalo';
-  $('#fSave').textContent = mode === 'edit' ? 'Save karo' : 'Stock mein daalo';
+  $('#addTitle').textContent = mode === 'edit' ? 'Edit item' : mode === 'restock' ? `Restock ${it.name}` : 'Add to stock';
+  $('#fSave').textContent = mode === 'edit' ? 'Save' : 'Add to stock';
   $('#fName').value = it?.name || ''; $('#fQty').value = it?.qty || '';
   $('#fExp').value = mode === 'edit' ? it.expiry : '';
   $('#fExp').min = todayISO();
@@ -579,13 +580,13 @@ $('#quickDates').onclick = e => {
 $('#addForm').onsubmit = async e => {
   e.preventDefault();
   const name = $('#fName').value.trim(), expiry = $('#fExp').value;
-  if (!name || !expiry) return toast('Naam aur expiry dono chahiye');
+  if (!name || !expiry) return toast('Add a name and an expiry date');
   const payload = { name, qty: $('#fQty').value.trim(), expiry, category: pickedCat || guessCat(name), alertDays: $('#fAlert').value === 'auto' ? undefined : Number($('#fAlert').value) };
   const btn = $('#fSave'); btn.disabled = true;
   try {
-    if (formMode.type === 'edit') { await api('update', { id: formMode.id, ...payload, alertDays: payload.alertDays ?? 'auto' }); toast('Save ho gaya'); }
-    else if (formMode.type === 'restock') { await api('restock', { id: formMode.id, ...payload }); toast(`${name} wapas stock mein`); }
-    else { await api('add', payload); toast(`${name} add ho gaya ✓`); }
+    if (formMode.type === 'edit') { await api('update', { id: formMode.id, ...payload, alertDays: payload.alertDays ?? 'auto' }); toast('Saved'); }
+    else if (formMode.type === 'restock') { await api('restock', { id: formMode.id, ...payload }); toast(`${name} is back in stock`); }
+    else { await api('add', payload); toast(`${name} added ✓`); }
     closeSheet(); render();
   } catch (err) { toast(err.message); }
   finally { btn.disabled = false; }
@@ -602,18 +603,18 @@ function openDetail(id) {
       <div class="meta"><h3 style="margin:0">${esc(it.name)}</h3><span class="pill num" style="display:inline-block;margin-top:6px">${dayWord(dl)}</span></div>
     </div>
     <dl class="kv">
-      <dt>Kitna</dt><dd>${esc(it.qty || '—')}</dd>
+      <dt>Quantity</dt><dd>${esc(it.qty || '—')}</dd>
       <dt>Category</dt><dd>${esc(it.category || 'Other')}</dd>
-      <dt>Expiry</dt><dd>${niceDate(it.expiry)}</dd>
-      <dt>Alert</dt><dd>${alertWord(Number(it.alertDays) || 1)} pehle (${niceDate(addDays(it.expiry, -(Number(it.alertDays) || 1)))})</dd>
-      <dt>Add kiya</dt><dd>${it.addedOn ? niceDate(it.addedOn) : '—'}${it.addedBy ? ' · ' + esc(it.addedBy) : ''}</dd>
+      <dt>Expires</dt><dd>${niceDate(it.expiry)}</dd>
+      <dt>Alert</dt><dd>${alertWord(Number(it.alertDays) || 1)} before (${niceDate(addDays(it.expiry, -(Number(it.alertDays) || 1)))})</dd>
+      <dt>Added</dt><dd>${it.addedOn ? niceDate(it.addedOn) : '—'}${it.addedBy ? ' · ' + esc(it.addedBy) : ''}</dd>
     </dl>
     <div class="actions">
-      <button class="btn primary full" data-act="finish" type="button">Khatam ho gaya → Shopping</button>
-      <button class="btn soft" data-act="edit" type="button">Badlo</button>
-      <button class="btn danger" data-act="del" type="button">Hatao</button>
+      <button class="btn primary full" data-act="finish" type="button">Used up → Shopping list</button>
+      <button class="btn soft" data-act="edit" type="button">Edit</button>
+      <button class="btn danger" data-act="del" type="button">Remove</button>
     </div>
-    <div class="confirm" id="confirmDel" hidden><span>Pakka hatana hai? (fenk diya)</span><button class="btn small danger" data-act="del2" type="button" style="background:var(--bad);color:#fff">Haan, hatao</button></div>`;
+    <div class="confirm" id="confirmDel" hidden><span>Remove this item? (thrown away)</span><button class="btn small danger" data-act="del2" type="button" style="background:var(--bad);color:#fff">Yes, remove</button></div>`;
   $('#detailBody').onclick = async e => {
     const a = e.target.closest('[data-act]')?.dataset.act; if (!a) return;
     if (a === 'edit') return openForm('edit', it);
@@ -629,7 +630,7 @@ async function finish(id) {
   const it = items.find(i => i.id === id); if (!it) return;
   it.status = 'shopping'; render();
   const req = api('finish', { id });
-  toast(`${it.name} khatam → shopping list`, async () => {
+  toast(`${it.name} moved to shopping list`, async () => {
     const x = items.find(i => i.id === id); if (x) { x.status = 'active'; render(); }
     try { await req.catch(() => {}); await api('reactivate', { id }); render(); } catch (e) { toast(e.message); }
   });
@@ -638,7 +639,7 @@ async function finish(id) {
 async function remove(id) {
   const it = items.find(i => i.id === id); if (!it) return;
   items = items.filter(i => i.id !== id); render();
-  try { await api('remove', { id }); toast(`${it.name} hata diya`); render(); } catch (e) { items.push(it); render(); toast(e.message); }
+  try { await api('remove', { id }); toast(`${it.name} removed`); render(); } catch (e) { items.push(it); render(); toast(e.message); }
 }
 
 /* ---------- list interactions: tap + swipe ---------- */
@@ -682,7 +683,7 @@ $('#vShop').addEventListener('submit', async e => {
   e.preventDefault();
   const v = $('#shopInp').value.trim(); if (!v) return;
   $('#shopInp').value = '';
-  try { await api('add', { name: v, status: 'shopping', category: guessCat(v) }); render(); toast(`${v} list mein`); }
+  try { await api('add', { name: v, status: 'shopping', category: guessCat(v) }); render(); toast(`${v} added to list`); }
   catch (err) { toast(err.message); }
 });
 $('#vShop').addEventListener('click', async e => {
@@ -693,10 +694,10 @@ $('#vShop').addEventListener('click', async e => {
   if (b.dataset.act === 'drop') remove(id);
 });
 async function shareList() {
-  const text = '🛒 Lana hai:\n' + shopping().map(i => '• ' + i.name).join('\n');
+  const text = '🛒 To buy:\n' + shopping().map(i => '• ' + i.name).join('\n');
   try { if (navigator.share) { await navigator.share({ text }); return; } } catch (e) { if (e.name === 'AbortError') return; }
-  try { await navigator.clipboard.writeText(text); toast('List copy ho gayi, WhatsApp mein paste karo'); }
-  catch { toast('Copy nahi ho paaya'); }
+  try { await navigator.clipboard.writeText(text); toast('List copied. Paste it in WhatsApp'); }
+  catch { toast('Couldn\'t copy'); }
 }
 
 /* ---------- settings ---------- */
@@ -705,13 +706,13 @@ $('#setForm').onsubmit = async e => {
   e.preventDefault();
   cfg = { name: $('#eName').value.trim(), api: $('#eApi').value.trim(), key: $('#eKey').value.trim() };
   LS.set('name', cfg.name); LS.set('api', cfg.api); LS.set('key', cfg.key);
-  closeSheet(); await refresh(); toast('Save ho gaya');
+  closeSheet(); await refresh(); toast('Saved');
 };
 $('#btnInvite').onclick = async () => {
   const link = location.origin + location.pathname + '?api=' + encodeURIComponent(cfg.api) + '&key=' + encodeURIComponent(cfg.key);
-  const text = 'Kirana Management app ka link 👇 (khol ke "Add to Home Screen" kar lena)\n' + link;
+  const text = 'Kirana Management app 👇 (open it and tap "Add to Home Screen")\n' + link;
   try { if (navigator.share) { await navigator.share({ text }); return; } } catch (e) { if (e.name === 'AbortError') return; }
-  try { await navigator.clipboard.writeText(text); toast('Link copy ho gaya'); } catch { toast('Copy nahi ho paaya'); }
+  try { await navigator.clipboard.writeText(text); toast('Link copied'); } catch { toast('Couldn\'t copy'); }
 };
 
 /* ---------- setup ---------- */
@@ -722,14 +723,14 @@ async function startApp() {
 $('#setupForm').onsubmit = async e => {
   e.preventDefault();
   const api0 = $('#sApi').value.trim(), key0 = $('#sKey').value.trim(), name0 = $('#sName').value.trim();
-  $('#sErr').hidden = true; $('#sBtn').disabled = true; $('#sBtn').textContent = 'Check kar rahe hain…';
+  $('#sErr').hidden = true; $('#sBtn').disabled = true; $('#sBtn').textContent = 'Checking…';
   cfg = { api: api0, key: key0, name: name0 };
   try {
     await api('list');
     LS.set('api', api0); LS.set('key', key0); LS.set('name', name0);
     startApp();
-  } catch (err) { $('#sErr').textContent = err.message + '. Link aur code check karo.'; $('#sErr').hidden = false; }
-  finally { $('#sBtn').disabled = false; $('#sBtn').textContent = 'Shuru karo'; }
+  } catch (err) { $('#sErr').textContent = err.message + '. Check the link and family code.'; $('#sErr').hidden = false; }
+  finally { $('#sBtn').disabled = false; $('#sBtn').textContent = 'Get started'; }
 };
 
 if (cfg.api && cfg.key && cfg.name) startApp();
